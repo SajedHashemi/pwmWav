@@ -45,6 +45,10 @@ class pwmWav{
     void setFile(File);
     void setData(const uint8_t*, uint32_t);
     
+    /////////////////////////////////////////////////////////in construction
+    void setServer(WiFiClient, char*, int);
+    ////////////////////////////////////////////////////////////////////////
+    
     void setVolume(int8_t val){ vol = val; }
     int8_t increaseVolume(){ if(++vol>=16) vol=16; return vol; }
     int8_t decreaseVolume(){ if(--vol<=-16) vol=-16; return vol; }
