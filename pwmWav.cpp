@@ -248,6 +248,7 @@ void pwmWav::setData(const uint8_t* src, uint32_t len){
   delayToWrite = ((((float)READ_LEN / sampleRate) * 1000)/(bits / 8)) + 1;
 }
 
+////////////////////////////////////////////////////////////// In construction
 void pwmWav::setServer(WiFiClient *src, char* url, int port){
   if(!_init) return;
   wavOnline = url;
@@ -276,6 +277,7 @@ void pwmWav::setServer(WiFiClient *src, char* url, int port){
   playMode = ONLINE_MODE;
   delayToWrite = ((((float)READ_LEN / sampleRate) * 1000)/(bits / 8)) + 1;
 }
+/////////////////////////////////////////////////////////////////////////////
 
 void pwmWav::getLengthTime(uint8_t *hr, uint8_t *mi, uint8_t *sc){
   int sec = ((float)dataSize / sampleRate) / (bits / 8);
