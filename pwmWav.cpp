@@ -248,37 +248,6 @@ void pwmWav::setData(const uint8_t* src, uint32_t len){
   delayToWrite = ((((float)READ_LEN / sampleRate) * 1000)/(bits / 8)) + 1;
 }
 
-////////////////////////////////////////////////////////////// In construction
-void pwmWav::setServer(WiFiClient *src, char* url, int port){
-  if(!_init) return;
-  wavOnline = url;
-  
-  char *server = getServer(url);
-  
-  if(!src.connect(server, port)){
-    Serial.println("Could not connect to server!");
-    return;
-  }
-  Serial.println("Connect to server success.");
-  
-  src.printf("GET %s HTTP/1.1\r\nhost:%s\r\n\r\n", url, server);
-  while(!src.available()) delay(100);
-  while(src.available()){
-    int bufC = 0;
-    uint8_t buf[READ_LEN];
-    bufC = src.read(buf, READ_LEN);
-    Serial.printf("Read from server: %d\r\n", bufC);
-  }
-  
-  //getHeader(wavData, len);
-  //ledc_timer_bit_t bt = (ledc_timer_bit_t)bits;
-  //pwm_audio_set_param(sampleRate, bt, channels);  /**< Set sample rate, bits and channel numner */
-  //seekPointer = dataStart;
-  playMode = ONLINE_MODE;
-  delayToWrite = ((((float)READ_LEN / sampleRate) * 1000)/(bits / 8)) + 1;
-}
-/////////////////////////////////////////////////////////////////////////////
-
 void pwmWav::getLengthTime(uint8_t *hr, uint8_t *mi, uint8_t *sc){
   int sec = ((float)dataSize / sampleRate) / (bits / 8);
   if(sec < 60){
