@@ -1,0 +1,19 @@
+outconfig_t	LITERAL1
+play_mode       LITERAL1
+
+begin		KEYWORD2
+getHeader	KEYWORD2
+start		KEYWORD2
+stop		KEYWORD2
+run		KEYWORD2
+play		KEYWORD2
+setFile		KEYWORD2
+setData         KEYWORD2
+setVolume	KEYWORD2
+getVolume	KEYWORD2
+increaseVolume	KEYWORD2
+decreaseVolume	KEYWORD2
+getSamplerate	KEYWORD2
+getChannels	KEYWORD2
+getBits		KEYWORD2
+getLengthTime   KEYWORD2
