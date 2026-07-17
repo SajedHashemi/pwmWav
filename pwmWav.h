@@ -1,3 +1,5 @@
+#include <WiFi.h>
+#include <WiFiClient.h>
 #include "pwm_audio.h"
 #include "FS.h"
 #include <SPIFFS.h>
@@ -12,6 +14,8 @@
 
 #define GET_LE_LONGWORD(bfr, ofs) (bfr[ofs+3] << 24 | bfr[ofs+2] << 16 |bfr[ofs+1] << 8 |bfr[ofs+0])
 #define GET_LE_SHORTWORD(bfr, ofs) (bfr[ofs+1] << 8 | bfr[ofs+0])
+#define GET_LONGWORD(bfr) (bfr[3] << 24 | bfr[2] << 16 | bfr[1] << 8 | bfr[0])
+#define GET_SHORTWORD(bfr) (bfr[1] << 8 | bfr[0])
 #define GET_DATA_LEN(bfr) (sizeof(bfr)/sizeof(bfr[0]))
 
 #define SPEAKER_L 12
@@ -25,7 +29,8 @@ typedef struct wav_config_t{
 
 enum play_mode{
   FILE_MODE,
-  DATA_MODE
+  DATA_MODE,
+  ONLINE_MODE
 };
 
 class pwmWav{
@@ -36,6 +41,7 @@ class pwmWav{
     bool end();
     uint8_t getHeader(File);
     uint8_t getHeader(const uint8_t*, uint32_t);
+    bool getParams(uint8_t*, int);
     void play();
     void play(File);
     void play(const uint8_t*, uint32_t);
@@ -44,6 +50,7 @@ class pwmWav{
     bool start();
     void setFile(File);
     void setData(const uint8_t*, uint32_t);
+    bool setData(WiFiClient);
     
     void setVolume(int8_t val){ vol = val; }
     int8_t increaseVolume(){ if(++vol>=16) vol=16; return vol; }
@@ -54,6 +61,7 @@ class pwmWav{
     int getBits(){ return bits; }
 
     void getLengthTime(uint8_t*, uint8_t*, uint8_t*);
+    bool urlSeperator(String*, String*, int*);
     
   private:
     int channels, sampleRate, bits;
@@ -65,9 +73,13 @@ class pwmWav{
     bool _init = false;
     play_mode playMode;
     File wavFile;
+    WiFiClient wavClient;
     const uint8_t* wavData;
+    char* wavOnline = NULL;
     uint8_t delayToWrite;
 
-    int read(uint8_t*);
+    int readHTTPContent(uint8_t*, int*, uint32_t);
+    int readHTTPContentWithCMP(uint8_t*, int*, const char* contentcmp = "", uint8_t aftercmp = 0);
+    int read(uint8_t*, uint32_t len = READ_LEN);
     size_t write(uint8_t*, int);
 };
