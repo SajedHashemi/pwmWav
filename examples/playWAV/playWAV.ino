@@ -3,14 +3,14 @@
 #include <pwmWav.h>
 #include "data.h"
 
-#define WIFI_SSID "ODIN"
-#define WIFI_PASS "odin2022!@#"
+#define WIFI_SSID "YOUR-SSID"
+#define WIFI_PASS "YOUR-PASS"
 
 #define SPEAKER_L 12
 #define SPEAKER_R -1
 
 //#define WAV_ONLINE_ADDR "http://192.168.2.2/data/speak.wav"
-#define WAV_ONLINE_ADDR "http://sound.mycotech.ir/wav/music_2.wav"
+#define WAV_ONLINE_ADDR "http://sound.mycotech.ir/wav/voice_1.wav"
 
 WiFiClient client;
 File aud1, aud2, aud3;
@@ -31,7 +31,7 @@ void setup() {
     delay(500);
     if(--toConnect==0) break;
   }
-  if(toConnect==0) Serial.println("Connect to network faild!\r\n** Online play music nut running! **\r\n");
+  if(toConnect==0) Serial.println("Connect to network faild!\r\n** Online play music not running! **\r\n");
   Serial.println();
   
   SPIFFS.begin();
@@ -49,6 +49,7 @@ void loop(){
   if(musicNumber==0){
     //Test_1(Play from file)
     Serial.println("Test 1: Play file -> test.wav");
+    out.setVolume(-10);
     out.play(aud1);
     delay(2000);
     musicNumber++;
@@ -97,6 +98,7 @@ void loop(){
       if(WiFi.status() == WL_CONNECTED){
         if(!client.connect(host.c_str(), httpPort)){
           Serial.println("Connect to host faild!");
+          musicNumber++;
         }else{
           client.printf("GET /%s HTTP/1.1\r\nhost: %s\r\n\r\n", url.c_str(), host.c_str());
           if(out.setData(client)){
@@ -107,6 +109,9 @@ void loop(){
             musicNumber++;
           }
         }
+      }else{
+        Serial.println("Network not available!");
+        musicNumber++;
       }
     }
   }else{
