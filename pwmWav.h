@@ -41,7 +41,6 @@ class pwmWav{
     bool end();
     uint8_t getHeader(File);
     uint8_t getHeader(const uint8_t*, uint32_t);
-    bool getParams(uint8_t*, int);
     void play();
     void play(File);
     void play(const uint8_t*, uint32_t);
