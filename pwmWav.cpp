@@ -51,7 +51,7 @@ bool pwmWav::end(){
     _init = false;
     stopped = true;
     if(wavFile) wavFile.close();
-    wavData = NULL;
+    if(wavClient) wavClient.stop();
     seekPointer = 0;
     dataSize = 0;
     dataStart = 0;
@@ -156,68 +156,6 @@ uint8_t pwmWav::getHeader(File soundFile){
     }
   }
   return 0;   
-}
-
-bool pwmWav::getParams(uint8_t* hdr, int len){
-  uint8_t headerData[5]={NULL,NULL,NULL,NULL,NULL};
-  uint32_t offset = 0, size, chunkSize, lenformat, typformat;
-  uint32_t sampleSize, bitSize;
-
-  if(len < WAV_HEADER_BUF){
-    Serial.print("wav header not read\r\n");
-    return false;
-  }
-  
-  for(char i = 0; i < 4; i++, offset++) headerData[i] = hdr[offset];
-  if(memcmp(headerData,RIFF_ID,4)) return false;
-
-  for(char i = 0; i < 4; i++, offset++) headerData[i] = hdr[offset];
-  size = GET_LONGWORD(headerData);
-  for(char i = 0; i < 4; i++, offset++) headerData[i] = hdr[offset];
-  if(memcmp(headerData,WAVE_ID,4)) return false;
-
-  for(char i = 0; i < 4; i++, offset++) headerData[i] = hdr[offset];
-  if(memcmp(headerData,FMT_CHUNK_ID,4)) return false;
-
-  for(char i = 0; i < 4; i++, offset++) headerData[i] = hdr[offset];
-  lenformat = GET_LONGWORD(headerData);
-
-  for(char i = 0; i < 2; i++, offset++) headerData[i] = hdr[offset];
-  typformat = GET_SHORTWORD(headerData);
-
-  for(char i = 0; i < 2; i++, offset++) headerData[i] = hdr[offset];
-  channels = GET_SHORTWORD(headerData);
-
-  for(char i = 0; i < 4; i++, offset++) headerData[i] = hdr[offset];
-  sampleRate = GET_LONGWORD(headerData);
-
-  for(char i = 0; i < 4; i++, offset++) headerData[i] = hdr[offset];
-  sampleSize = GET_LONGWORD(headerData);
-  
-  for(char i = 0; i < 2; i++, offset++) headerData[i] = hdr[offset];
-  bitSize = GET_SHORTWORD(headerData);
-
-  for(char i = 0; i < 2; i++, offset++) headerData[i] = hdr[offset];
-  bits = GET_SHORTWORD(headerData);
-
-  while(true){
-    for(char i = 0; i < 4; i++, offset++) headerData[i] = hdr[offset];
-    if(memcmp(headerData,DATA_CHUNK_ID,4)){
-      if(offset == len) break;
-      offset -= 3;
-      continue;
-    }
-    break;
-  }
-  
-  for(char i = 0; i < 4; i++, offset++) headerData[i] = hdr[offset];
-  dataSize = GET_LONGWORD(headerData);
-  dataStart = offset;
-  
-  uint8_t hr = 0, mi = 0, sc = 0;
-  getLengthTime(&hr, &mi, &sc);
-  Serial.printf("Wav file detected, Samplerate=%d, channels=%d, bits=%d, size=%d, start=%d, length=%d:%d:%d\n", sampleRate,channels,bits,dataSize,dataStart, hr, mi, sc);
-  return true;
 }
 
 void pwmWav::play(){
@@ -331,7 +269,7 @@ bool pwmWav::setData(WiFiClient src){
     int code = 0;
     bufC = readHTTPContentWithCMP(buf, &code, DATA_CHUNK_ID, 4);
     if(code==200){
-      getParams(buf, bufC);
+      getHeader(buf, bufC);
       ledc_timer_bit_t bt = (ledc_timer_bit_t)bits;
       pwm_audio_set_param(sampleRate, bt, channels);  /**< Set sample rate, bits and channel numner */
       playMode = ONLINE_MODE;
@@ -510,6 +448,15 @@ int pwmWav::read(uint8_t* bfr, uint32_t len){
     if(wavFile.available()>=len) bufC=wavFile.read(bfr, len);
     else bufC = wavFile.read(bfr, wavFile.available());
   }else if(playMode == ONLINE_MODE){
+    if(wavClient.connected()){
+      if(seekPointer < dataSize && !wavClient.available()){
+        int idel = 3000;
+        while(!wavClient.available() && idel>0){
+          delay(10);
+          idel-=10;
+        }
+      }
+    }
     if(wavClient.available()>=len) bufC=wavClient.read(bfr, len);
     else bufC = wavClient.read(bfr, wavClient.available());
   }
