@@ -8,7 +8,7 @@ stop		KEYWORD2
 run		KEYWORD2
 play		KEYWORD2
 setFile		KEYWORD2
-setData         KEYWORD2
+setData		KEYWORD2
 setVolume	KEYWORD2
 getVolume	KEYWORD2
 increaseVolume	KEYWORD2
