@@ -172,8 +172,11 @@ void pwmWav::play(){
     }else if(playMode == DATA_MODE){
       for(;bufC < READ_LEN && (dataSize-seekPointer)>0; bufC++, seekPointer++)
         buf[bufC] = wavData[seekPointer];
+    }else if(playMode == ONLINE_MODE){
+      bufC = read(buf);
+      seekPointer += bufC;
     }
-    write(buf, bufC);
+    if(!write(buf, bufC)) break;
   }
   stop();
 }
