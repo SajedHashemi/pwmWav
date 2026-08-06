@@ -8,6 +8,10 @@ void printHex(const uint8_t* buf, int len){
   Serial.println();
 }
 
+void pwmWav::enEcho(bool en){
+  _echo = en;
+}
+
 bool pwmWav::begin(outconfig_t cfg){
   if(_init) return true;
   static const pwm_audio_config_t pac ={
@@ -24,11 +28,13 @@ bool pwmWav::begin(outconfig_t cfg){
   
   esp_err_t err = pwm_audio_init(&pac);  /**< Initialize pwm audio */
   if(err != ESP_OK){
-    if(err == ESP_FAIL) Serial.println("timer_group or ledc initialize failed");
-    else if(err == ESP_ERR_INVALID_ARG) Serial.println("argument wrong");
-    else if(err == ESP_ERR_INVALID_STATE) Serial.println("The pwm audio already configure");
-    else if(err == ESP_ERR_NO_MEM) Serial.println("Memory allocate failed");
-    else Serial.println("initialize failed[Unknown error]");
+    if(_echo){
+      if(err == ESP_FAIL) Serial.println("timer_group or ledc initialize failed");
+      else if(err == ESP_ERR_INVALID_ARG) Serial.println("argument wrong");
+      else if(err == ESP_ERR_INVALID_STATE) Serial.println("The pwm audio already configure");
+      else if(err == ESP_ERR_NO_MEM) Serial.println("Memory allocate failed");
+      else Serial.println("initialize failed[Unknown error]");
+    }
     return false;
   }
   _init = true;
@@ -68,7 +74,7 @@ uint8_t pwmWav::getHeader(const uint8_t* soundArray, uint32_t len){
   uint32_t offset = 0x00, size, chunkSize;
   
   if(len < WAV_HEADER_BUF){
-    Serial.print("1:wav header not read\r\n");
+    if(_echo) Serial.print("1:wav header not read\r\n");
     return 0;
   }
   
@@ -85,18 +91,18 @@ uint8_t pwmWav::getHeader(const uint8_t* soundArray, uint32_t len){
       dataStart = offset;
       uint8_t hr = 0, mi = 0, sc = 0;
       getLengthTime(&hr, &mi, &sc);
-      Serial.printf("Wav file detected, Samplerate=%d, channels=%d, bits=%d, size=%d, start=%d, length=%d:%d:%d\n", sampleRate,channels,bits,dataSize,dataStart, hr, mi, sc);
+      if(_echo) Serial.printf("Wav file detected, Samplerate=%d, channels=%d, bits=%d, size=%d, start=%d, length=%d:%d:%d\n", sampleRate,channels,bits,dataSize,dataStart, hr, mi, sc);
       return 1;
     }else{
       chunkSize=GET_LE_LONGWORD(headerData,0x04);
-      Serial.printf("Chunk: %d\r\n", chunkSize);
+      if(_echo) Serial.printf("Chunk: %d\r\n", chunkSize);
       if(chunkSize>=WAV_HEADER_BUF-8){
-        Serial.printf("header chunk size too big!\n");
+        if(_echo) Serial.printf("header chunk size too big!\n");
         return 0;
       }
       for(uint8_t i = 8; i < chunkSize+8; offset++, i++) headerData[i] = soundArray[offset];
       if(size-offset < chunkSize){
-        Serial.printf("2:wav header not read\n");
+        if(_echo) Serial.printf("2:wav header not read\n");
         return 0;
       }
       if(!memcmp(headerData, FMT_CHUNK_ID,4)){
@@ -115,7 +121,7 @@ uint8_t pwmWav::getHeader(File soundFile){
   
   soundFile.seek(0);
   if(soundFile.read(headerData,0x0c) != 0x0c){
-    Serial.printf("1:wav header not read\n");
+    if(_echo) Serial.printf("1:wav header not read\n");
     return 0;
   }
   
@@ -126,7 +132,7 @@ uint8_t pwmWav::getHeader(File soundFile){
 
   while(offset<size){
     if(soundFile.read(headerData,8) != 8){
-      Serial.printf("2:wav header not read\n");
+      if(_echo) Serial.printf("2:wav header not read\n");
       return 0;
     }
     if(!memcmp(headerData, DATA_CHUNK_ID,4)){
@@ -134,17 +140,17 @@ uint8_t pwmWav::getHeader(File soundFile){
       dataStart = offset+8;
       uint8_t hr = 0, mi = 0, sc = 0;
       getLengthTime(&hr, &mi, &sc);
-      Serial.printf("Wav file detected, Samplerate=%d, channels=%d, bits=%d, size=%d, start=%d, length=%d:%d:%d\n", sampleRate,channels,bits,dataSize,dataStart, hr, mi, sc);
+      if(_echo) Serial.printf("Wav file detected, Samplerate=%d, channels=%d, bits=%d, size=%d, start=%d, length=%d:%d:%d\n", sampleRate,channels,bits,dataSize,dataStart, hr, mi, sc);
       return 1;
     }else{
       chunkSize=GET_LE_LONGWORD(headerData,0x04);
-      Serial.printf("Chunk: %d\r\n", chunkSize);
+      if(_echo) Serial.printf("Chunk: %d\r\n", chunkSize);
       if(chunkSize>=WAV_HEADER_BUF-8){
-        Serial.printf("header chunk size too big!\n");
+        if(_echo) Serial.printf("header chunk size too big!\n");
         return 0;
       }
       if(soundFile.read(headerData+8,chunkSize) != chunkSize){
-        Serial.printf("3:wav header not read\n");
+        if(_echo) Serial.printf("3:wav header not read\n");
         return 0;
       }
       if(!memcmp(headerData, FMT_CHUNK_ID,4)){
@@ -219,7 +225,7 @@ bool pwmWav::stop(){
   if(!_init) return false;
   if(stopped) return true;
   if(pwm_audio_stop() == ESP_OK){
-    Serial.println("Stop");
+    if(_echo) Serial.println("Stop");
     seekPointer = dataStart;
     wavFile.seek(dataStart);
     stopped = true;
@@ -280,7 +286,7 @@ bool pwmWav::setData(WiFiClient src){
       delayToWrite = ((((float)READ_LEN / sampleRate) * 1000)/(bits / 8)) + 1;
       return true;
     }else{
-      Serial.println("Could not read data from server!");
+      if(_echo) Serial.println("Could not read data from server!");
     }
   }
   return false;
@@ -312,7 +318,7 @@ bool pwmWav::urlSeperator(String* url, String* host, int* port){
     *port = 80;
     security = false;
   }
-  Serial.printf("URL: %s - ",tmp.c_str());
+  if(_echo) Serial.printf("URL: %s - ",tmp.c_str());
   tmp.trim();
   if(tmp.indexOf("://")>=0){
     pos = tmp.indexOf("://");
@@ -338,10 +344,12 @@ bool pwmWav::urlSeperator(String* url, String* host, int* port){
   }
 
   //tmp =*host;
-  //Serial.printf("HOST: %s - ", tmp.c_str());
-  //Serial.printf("PORT: %d - ", httpPort);
+  //if(_echo){
+  //  Serial.printf("HOST: %s - ", tmp.c_str());
+  //  Serial.printf("PORT: %d - ", httpPort);
+  //}
   //tmp = *url;
-  //Serial.printf("ADDR: %s\r\n",tmp.c_str());
+  //if(_echo) Serial.printf("ADDR: %s\r\n",tmp.c_str());
   return security;
 }
 
@@ -351,7 +359,7 @@ int pwmWav::readHTTPContent(uint8_t* bfr, int *code, uint32_t contentLength = -1
   int bufC = 0;
   while(wavClient.available()){
     String c = wavClient.readStringUntil('\n');
-    //Serial.println(c);
+    //if(_echo) Serial.println(c);
     c.trim();
     if(len > 0){
       if(c.length() == 0){
@@ -384,7 +392,7 @@ int pwmWav::readHTTPContent(uint8_t* bfr, int *code, uint32_t contentLength = -1
       *code = c.substring(0, pos).toInt();
     }
   }
-  Serial.printf("Code=%d, Length=%d\r\n",*code, len);
+  if(_echo) Serial.printf("Code=%d, Length=%d\r\n",*code, len);
   return bufC;
 }
 
@@ -395,7 +403,7 @@ int pwmWav::readHTTPContentWithCMP(uint8_t* bfr, int *code, const char* contentc
   uint8_t cmplen = strlen(contentcmp);
   while(wavClient.available()){
     String c = wavClient.readStringUntil('\n');
-    //Serial.println(c);
+    //if(_echo) Serial.println(c);
     c.trim();
     if(len > 0){
       if(c.length() == 0){
@@ -441,7 +449,7 @@ int pwmWav::readHTTPContentWithCMP(uint8_t* bfr, int *code, const char* contentc
       *code = c.substring(0, pos).toInt();
     }
   }
-  Serial.printf("Code=%d, Length=%d\r\n",*code, len);
+  if(_echo) Serial.printf("Code=%d, Length=%d\r\n",*code, len);
   return bufC;
 }
 
@@ -469,7 +477,7 @@ int pwmWav::read(uint8_t* bfr, uint32_t len){
 size_t pwmWav::write(uint8_t* buf, int bufC){
   size_t written = 0;
   pwm_audio_set_volume(vol);
-  //printHex(buf, bufC);
+  //if(_echo) printHex(buf, bufC);
   pwm_audio_write(buf, bufC, &written, 1000 / portTICK_PERIOD_MS);
   delay(delayToWrite);
   return written;

@@ -62,6 +62,8 @@ class pwmWav{
     void getLengthTime(uint8_t*, uint8_t*, uint8_t*);
     bool urlSeperator(String*, String*, int*);
     
+    void enEcho(bool);
+    
   private:
     int channels, sampleRate, bits;
     uint32_t dataStart;
@@ -76,6 +78,7 @@ class pwmWav{
     const uint8_t* wavData;
     char* wavOnline = NULL;
     uint8_t delayToWrite;
+    bool _echo = false;
 
     int readHTTPContent(uint8_t*, int*, uint32_t);
     int readHTTPContentWithCMP(uint8_t*, int*, const char* contentcmp = "", uint8_t aftercmp = 0);
