@@ -278,7 +278,7 @@ bool pwmWav::setData(WiFiClient src){
     int code = 0;
     bufC = readHTTPContentWithCMP(buf, &code, DATA_CHUNK_ID, 4);
     if(code==200){
-      getHeader(buf, bufC);
+      if(getHeader(buf, bufC)== 0) return false;
       ledc_timer_bit_t bt = (ledc_timer_bit_t)bits;
       pwm_audio_set_param(sampleRate, bt, channels);  /**< Set sample rate, bits and channel numner */
       playMode = ONLINE_MODE;
