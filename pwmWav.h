@@ -4,7 +4,7 @@
 #include "FS.h"
 #include <SPIFFS.h>
 
-#define READ_LEN       (2 * 256)
+#define READ_LEN       (2 * 32)
 #define WAV_HEADER_BUF 0x30
 
 #define RIFF_ID "RIFF"
@@ -58,6 +58,9 @@ class pwmWav{
     int getSamplerate(){ return sampleRate; }
     int getChannels(){ return channels; }
     int getBits(){ return bits; }
+    
+    void setSamplerate(int);
+    void setBits(int);
 
     void getLengthTime(uint8_t*, uint8_t*, uint8_t*);
     bool urlSeperator(String*, String*, int*);
@@ -77,11 +80,11 @@ class pwmWav{
     WiFiClient wavClient;
     const uint8_t* wavData;
     char* wavOnline = NULL;
-    uint8_t delayToWrite;
+    uint32_t delayToWrite;
     bool _echo = false;
 
     int readHTTPContent(uint8_t*, int*, uint32_t);
-    int readHTTPContentWithCMP(uint8_t*, int*, const char* contentcmp = "", uint8_t aftercmp = 0);
+    int readHTTPContentWithCMP(uint8_t*, int*, const char* contentcmp = "", uint8_t aftercmp = 0, int bufLen = READ_LEN);
     int read(uint8_t*, uint32_t len = READ_LEN);
     size_t write(uint8_t*, int);
 };

@@ -254,7 +254,7 @@ void pwmWav::setFile(File src){
   pwm_audio_set_param(sampleRate, bt, channels);  /**< Set sample rate, bits and channel numner */
   playMode = FILE_MODE;
   seekPointer = dataStart;
-  delayToWrite = ((((float)READ_LEN / sampleRate) * 1000)/(bits / 8)) + 1;
+  delayToWrite = ((((float)READ_LEN / sampleRate) * 1000000)/(bits / 8)) + 1;
 }
 
 void pwmWav::setData(const uint8_t* src, uint32_t len){
@@ -265,7 +265,7 @@ void pwmWav::setData(const uint8_t* src, uint32_t len){
   pwm_audio_set_param(sampleRate, bt, channels);  /**< Set sample rate, bits and channel numner */
   playMode = DATA_MODE;
   seekPointer = dataStart;
-  delayToWrite = ((((float)READ_LEN / sampleRate) * 1000)/(bits / 8)) + 1;
+  delayToWrite = ((((float)READ_LEN / sampleRate) * 1000000)/(bits / 8)) + 1;
 }
 
 bool pwmWav::setData(WiFiClient src){
@@ -274,22 +274,34 @@ bool pwmWav::setData(WiFiClient src){
   while(!wavClient.available()) delay(100);
   if(wavClient.available()){
     int bufC = 0;
-    uint8_t buf[READ_LEN];
+    uint8_t buf[512];
     int code = 0;
-    bufC = readHTTPContentWithCMP(buf, &code, DATA_CHUNK_ID, 4);
+    bufC = readHTTPContentWithCMP(buf, &code, DATA_CHUNK_ID, 4, 512);
     if(code==200){
       if(getHeader(buf, bufC)== 0) return false;
       ledc_timer_bit_t bt = (ledc_timer_bit_t)bits;
       pwm_audio_set_param(sampleRate, bt, channels);  /**< Set sample rate, bits and channel numner */
       playMode = ONLINE_MODE;
       seekPointer = dataStart;
-      delayToWrite = ((((float)READ_LEN / sampleRate) * 1000)/(bits / 8)) + 1;
+      delayToWrite = ((((float)READ_LEN / sampleRate) * 1000000)/(bits / 8)) + 1;
       return true;
     }else{
       if(_echo) Serial.println("Could not read data from server!");
     }
   }
   return false;
+}
+
+void pwmWav::setSamplerate(int sr){
+  sampleRate = sr;
+  ledc_timer_bit_t bt = (ledc_timer_bit_t)bits;
+  pwm_audio_set_param(sampleRate, bt, channels);  /**< Set sample rate, bits and channel numner */
+}
+
+void pwmWav::setBits(int bit){
+  bits = bit;
+  ledc_timer_bit_t bt = (ledc_timer_bit_t)bits;
+  pwm_audio_set_param(sampleRate, bt, channels);  /**< Set sample rate, bits and channel numner */
 }
 
 void pwmWav::getLengthTime(uint8_t *hr, uint8_t *mi, uint8_t *sc){
@@ -396,7 +408,7 @@ int pwmWav::readHTTPContent(uint8_t* bfr, int *code, uint32_t contentLength = -1
   return bufC;
 }
 
-int pwmWav::readHTTPContentWithCMP(uint8_t* bfr, int *code, const char* contentcmp, uint8_t aftercmp){
+int pwmWav::readHTTPContentWithCMP(uint8_t* bfr, int *code, const char* contentcmp, uint8_t aftercmp, int bufLen){
   bool ok = false;
   uint32_t len = 0;
   int bufC = 0;
@@ -407,7 +419,7 @@ int pwmWav::readHTTPContentWithCMP(uint8_t* bfr, int *code, const char* contentc
     c.trim();
     if(len > 0){
       if(c.length() == 0){
-        for(int i = 0; i < len && i < READ_LEN; i++){
+        for(int i = 0; i < len && i < bufLen; i++){
           //if(wavClient.connected()){
           //  while(!wavClient.available()) delay(10);
             *(bfr + i) = wavClient.read();
@@ -418,7 +430,7 @@ int pwmWav::readHTTPContentWithCMP(uint8_t* bfr, int *code, const char* contentc
                 if(*(bfr - n) != contentcmp[cmplen - n]) break;
               }
               if(n==cmplen){
-                for(n=0;n<aftercmp && n<(READ_LEN-i);n++){
+                for(n=0;n<aftercmp && n<(bufLen-i);n++){
                   *(bfr + i) = wavClient.read();
                   bufC++;
                 }
@@ -475,10 +487,11 @@ int pwmWav::read(uint8_t* bfr, uint32_t len){
 }
 
 size_t pwmWav::write(uint8_t* buf, int bufC){
+  if(bufC == 0) return 0;
   size_t written = 0;
   pwm_audio_set_volume(vol);
   //if(_echo) printHex(buf, bufC);
   pwm_audio_write(buf, bufC, &written, 1000 / portTICK_PERIOD_MS);
-  delay(delayToWrite);
+  delayMicroseconds(delayToWrite);
   return written;
 }
