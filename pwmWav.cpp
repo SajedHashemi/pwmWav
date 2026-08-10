@@ -198,7 +198,7 @@ void pwmWav::play(const uint8_t* src, uint32_t len){
   setData(src, len);
   play();
 }
-    
+
 int pwmWav::run(){
   if((!_init || !wavFile || !wavData || !wavClient) && stopped) return 0;
 
@@ -219,6 +219,10 @@ int pwmWav::run(){
   }
   stop();
   return 0;
+}
+
+size_t pwmWav::run(uint8_t* src, size_t len){
+  return write(src, len);
 }
 
 bool pwmWav::stop(){
@@ -292,16 +296,11 @@ bool pwmWav::setData(WiFiClient src){
   return false;
 }
 
-void pwmWav::setSamplerate(int sr){
+void pwmWav::setParameters(int sr, int bit, int ch){
   sampleRate = sr;
-  ledc_timer_bit_t bt = (ledc_timer_bit_t)bits;
-  pwm_audio_set_param(sampleRate, bt, channels);  /**< Set sample rate, bits and channel numner */
-}
-
-void pwmWav::setBits(int bit){
   bits = bit;
-  ledc_timer_bit_t bt = (ledc_timer_bit_t)bits;
-  pwm_audio_set_param(sampleRate, bt, channels);  /**< Set sample rate, bits and channel numner */
+  channels = (ch>2 || ch<1)?1:ch;
+  pwm_audio_set_param(sampleRate, (ledc_timer_bit_t)bits, channels);  /**< Set sample rate, bits and channel numner */
 }
 
 void pwmWav::getLengthTime(uint8_t *hr, uint8_t *mi, uint8_t *sc){
@@ -330,7 +329,7 @@ bool pwmWav::urlSeperator(String* url, String* host, int* port){
     *port = 80;
     security = false;
   }
-  if(_echo) Serial.printf("URL: %s - ",tmp.c_str());
+  if(_echo) Serial.printf("URL: %s\r\n",tmp.c_str());
   tmp.trim();
   if(tmp.indexOf("://")>=0){
     pos = tmp.indexOf("://");
@@ -357,7 +356,7 @@ bool pwmWav::urlSeperator(String* url, String* host, int* port){
 
   //tmp =*host;
   //if(_echo){
-  //  Serial.printf("HOST: %s - ", tmp.c_str());
+  //  Serial.printf(">>> HOST: %s - ", tmp.c_str());
   //  Serial.printf("PORT: %d - ", httpPort);
   //}
   //tmp = *url;

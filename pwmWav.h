@@ -45,13 +45,14 @@ class pwmWav{
     void play(File);
     void play(const uint8_t*, uint32_t);
     int run();
+    size_t run(uint8_t*, size_t);
     bool stop();
     bool start();
     void setFile(File);
     void setData(const uint8_t*, uint32_t);
     bool setData(WiFiClient);
     
-    void setVolume(int8_t val){ vol = val; }
+    void setVolume(int8_t val){ if(val<=16 && val>=-16) vol = val; }
     int8_t increaseVolume(){ if(++vol>=16) vol=16; return vol; }
     int8_t decreaseVolume(){ if(--vol<=-16) vol=-16; return vol; }
     uint8_t getVolume(){ return vol; }
@@ -59,8 +60,7 @@ class pwmWav{
     int getChannels(){ return channels; }
     int getBits(){ return bits; }
     
-    void setSamplerate(int);
-    void setBits(int);
+    void setParameters(int, int, int);
 
     void getLengthTime(uint8_t*, uint8_t*, uint8_t*);
     bool urlSeperator(String*, String*, int*);

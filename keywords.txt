@@ -17,7 +17,6 @@ getSamplerate	KEYWORD2
 getChannels	KEYWORD2
 getBits		KEYWORD2
 getLengthTime   KEYWORD2
-setSamplerate   KEYWORD2
-setBits   	KEYWORD2
+setParameters   KEYWORD2
 enEcho		KEYWORD2
 
