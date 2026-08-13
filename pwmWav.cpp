@@ -171,18 +171,18 @@ void pwmWav::play(){
   seekPointer = dataStart;
   while(seekPointer < dataSize){
     int bufC = 0;
-    uint8_t buf[READ_LEN];
+    //uint8_t buf[READ_LEN];
     if(playMode == FILE_MODE){
-      bufC = read(buf);
+      bufC = read(outBuf);
       seekPointer += bufC;
     }else if(playMode == DATA_MODE){
       for(;bufC < READ_LEN && (dataSize-seekPointer)>0; bufC++, seekPointer++)
-        buf[bufC] = wavData[seekPointer];
+        outBuf[bufC] = wavData[seekPointer];
     }else if(playMode == ONLINE_MODE){
-      bufC = read(buf);
+      bufC = read(outBuf);
       seekPointer += bufC;
     }
-    if(!write(buf, bufC)) break;
+    if(!write(outBuf, bufC)) break;
   }
   stop();
 }
@@ -204,20 +204,20 @@ int pwmWav::run(){
 
   if(seekPointer < dataSize){
     int bufC = 0;
-    uint8_t buf[READ_LEN];
+    //uint8_t buf[READ_LEN];
     if(playMode == FILE_MODE){
-      bufC = read(buf);
+      bufC = read(outBuf);
       seekPointer += bufC;
     }else if(playMode == DATA_MODE){
       for(;bufC < READ_LEN && (dataSize-seekPointer)>0; bufC++, seekPointer++)
-        buf[bufC] = wavData[seekPointer];
+        outBuf[bufC] = wavData[seekPointer];
     }else if(playMode == ONLINE_MODE){
-      bufC = read(buf);
+      bufC = read(outBuf);
       seekPointer += bufC;
     }
-    return write(buf, bufC);
+    return write(outBuf, bufC);
   }
-  stop();
+  else stop();
   return 0;
 }
 
@@ -232,6 +232,7 @@ bool pwmWav::stop(){
     if(_echo) Serial.println("Stop");
     seekPointer = dataStart;
     wavFile.seek(dataStart);
+    for(int i = 0; i < READ_LEN; i++) outBuf[i] = NULL;
     stopped = true;
     return true;
   }
@@ -303,8 +304,8 @@ void pwmWav::setParameters(int sr, int bit, int ch){
   pwm_audio_set_param(sampleRate, (ledc_timer_bit_t)bits, channels);  /**< Set sample rate, bits and channel numner */
 }
 
-void pwmWav::getLengthTime(uint8_t *hr, uint8_t *mi, uint8_t *sc){
-  int sec = ((float)dataSize / sampleRate) / (bits / 8);
+unsigned int pwmWav::getLengthTime(uint8_t *hr, uint8_t *mi, uint8_t *sc){
+  int sec = getLengthSeconds();
   if(sec < 60){
     *sc = sec;
   }else{
@@ -315,6 +316,11 @@ void pwmWav::getLengthTime(uint8_t *hr, uint8_t *mi, uint8_t *sc){
     *hr = *mi / 60;
     *mi = *mi % 60;
   }
+  return sec;
+}
+
+unsigned int pwmWav::getLengthSeconds(){
+  return (((float)dataSize / sampleRate) / (bits / 8));
 }
 
 bool pwmWav::urlSeperator(String* url, String* host, int* port){
@@ -488,6 +494,7 @@ int pwmWav::read(uint8_t* bfr, uint32_t len){
 size_t pwmWav::write(uint8_t* buf, int bufC){
   if(bufC == 0) return 0;
   size_t written = 0;
+  
   pwm_audio_set_volume(vol);
   //if(_echo) printHex(buf, bufC);
   pwm_audio_write(buf, bufC, &written, 1000 / portTICK_PERIOD_MS);

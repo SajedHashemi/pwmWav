@@ -35,6 +35,9 @@ enum play_mode{
 
 class pwmWav{
   public:
+  
+    uint8_t outBuf[READ_LEN];
+  
     pwmWav(){}
 
     bool begin(outconfig_t);
@@ -62,10 +65,13 @@ class pwmWav{
     
     void setParameters(int, int, int);
 
-    void getLengthTime(uint8_t*, uint8_t*, uint8_t*);
+    unsigned int getLengthTime(uint8_t*, uint8_t*, uint8_t*);
+    unsigned int getLengthSeconds(void);
     bool urlSeperator(String*, String*, int*);
     
     void enEcho(bool);
+    void getBuffer(uint8_t *dst, int len = READ_LEN){ memcpy(dst, outBuf, len); }
+    int getBufferLength(){ return READ_LEN; }
     
   private:
     int channels, sampleRate, bits;
