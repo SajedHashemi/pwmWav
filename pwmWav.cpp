@@ -215,7 +215,6 @@ int pwmWav::run(){
 }
 
 size_t pwmWav::run(uint8_t* src, size_t len){
-  delayToWrite = ((((float)len / (bits / 8)) * (1000000.0 / sampleRate)) / channels) + 1;
   return write(src, len);
 }
 
@@ -250,9 +249,6 @@ void pwmWav::setFile(File src){
   wavFile = src;
   getHeader(wavFile);
   wavFile.seek(dataStart);
-  //ledc_timer_bit_t bt = (ledc_timer_bit_t)bits;
-  //pwm_audio_set_param(sampleRate, bt, channels);  /**< Set sample rate, bits and channel numner */
-  //delayToWrite = ((((float)READ_LEN / sampleRate) * 1000000)/(bits / 8)) + 1;
   setParameters(sampleRate, bits, channels);
   playMode = FILE_MODE;
   seekPointer = dataStart;
@@ -262,9 +258,6 @@ void pwmWav::setData(const uint8_t* src, uint32_t len){
   if(!_init) return;
   wavData = src;
   getHeader(wavData, len);
-  //ledc_timer_bit_t bt = (ledc_timer_bit_t)bits;
-  //pwm_audio_set_param(sampleRate, bt, channels);  /**< Set sample rate, bits and channel numner */
-  //delayToWrite = ((((float)READ_LEN / sampleRate) * 1000000)/(bits / 8)) + 1;
   setParameters(sampleRate, bits, channels);
   playMode = DATA_MODE;
   seekPointer = dataStart;
@@ -281,9 +274,6 @@ bool pwmWav::setData(WiFiClient src){
     bufC = readHTTPContentWithCMP(buf, &code, DATA_CHUNK_ID, 4, 512);
     if(code==200){
       if(getHeader(buf, bufC)== 0) return false;
-      //ledc_timer_bit_t bt = (ledc_timer_bit_t)bits;
-      //pwm_audio_set_param(sampleRate, bt, channels);  /**< Set sample rate, bits and channel numner */
-      //delayToWrite = ((((float)READ_LEN / sampleRate) * 1000000)/(bits / 8)) + 1;
       setParameters(sampleRate, bits, channels);
       playMode = ONLINE_MODE;
       seekPointer = dataStart;
@@ -300,8 +290,15 @@ void pwmWav::setParameters(int sr, int bit, int ch){
   bits = bit;
   channels = (ch>2 || ch<1)?1:ch;
   pwm_audio_set_param(sampleRate, (ledc_timer_bit_t)bits, channels);  /**< Set sample rate, bits and channel numner */
-  delayToWrite = ((((float)READ_LEN / sampleRate) * 1000000)/(bits / 8)) + 1;
+  //setDelay(-1);
   isSetParameters = true;
+}
+
+void pwmWav::setDelay(long dly, int samps){
+  if(dly<=-1)
+    delayToWrite = ((((float)samps / (bits / 8)) * (1000000.0 / sampleRate)) / channels) + 1;
+  else
+    delayToWrite = dly;
 }
 
 unsigned int pwmWav::getLengthTime(uint8_t *hr, uint8_t *mi, uint8_t *sc){

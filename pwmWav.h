@@ -66,6 +66,8 @@ class pwmWav{
     int getBits(){ return bits; }
     
     void setParameters(int, int, int);
+    void setDelay(long dly = -1, int samps = READ_LEN); //-1: Automatic calculation of sample writing delay in microseconds
+    
     void setCallback(WAVCallback cb){ _pwmCallback = cb; }
     void delCallback(void){ _pwmCallback = nullptr; }
 
@@ -89,8 +91,7 @@ class pwmWav{
     File wavFile;
     WiFiClient wavClient;
     const uint8_t* wavData;
-    char* wavOnline = NULL;
-    uint32_t delayToWrite;
+    uint32_t delayToWrite = 0;
     bool _echo = false;
     
     WAVCallback _pwmCallback = nullptr;
