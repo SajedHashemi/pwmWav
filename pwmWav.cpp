@@ -170,19 +170,7 @@ void pwmWav::play(){
 
   seekPointer = dataStart;
   while(seekPointer < dataSize){
-    int bufC = 0;
-    //uint8_t buf[READ_LEN];
-    if(playMode == FILE_MODE){
-      bufC = read(outBuf);
-      seekPointer += bufC;
-    }else if(playMode == DATA_MODE){
-      for(;bufC < READ_LEN && (dataSize-seekPointer)>0; bufC++, seekPointer++)
-        outBuf[bufC] = wavData[seekPointer];
-    }else if(playMode == ONLINE_MODE){
-      bufC = read(outBuf);
-      seekPointer += bufC;
-    }
-    if(!write(outBuf, bufC)) break;
+    run();
   }
   stop();
 }
@@ -215,6 +203,11 @@ int pwmWav::run(){
       bufC = read(outBuf);
       seekPointer += bufC;
     }
+    
+    if(_pwmCallback!=nullptr){
+      _pwmCallback(outBuf, bufC);
+      return bufC;
+    }
     return write(outBuf, bufC);
   }
   else stop();
@@ -222,6 +215,7 @@ int pwmWav::run(){
 }
 
 size_t pwmWav::run(uint8_t* src, size_t len){
+  delayToWrite = ((((float)len / (bits / 8)) * (1000000.0 / sampleRate)) / channels) + 1;
   return write(src, len);
 }
 
@@ -234,6 +228,7 @@ bool pwmWav::stop(){
     wavFile.seek(dataStart);
     for(int i = 0; i < READ_LEN; i++) outBuf[i] = NULL;
     stopped = true;
+    isSetParameters = false;
     return true;
   }
   return false;
@@ -254,23 +249,25 @@ void pwmWav::setFile(File src){
   if(!_init) return;
   wavFile = src;
   getHeader(wavFile);
-  ledc_timer_bit_t bt = (ledc_timer_bit_t)bits;
   wavFile.seek(dataStart);
-  pwm_audio_set_param(sampleRate, bt, channels);  /**< Set sample rate, bits and channel numner */
+  //ledc_timer_bit_t bt = (ledc_timer_bit_t)bits;
+  //pwm_audio_set_param(sampleRate, bt, channels);  /**< Set sample rate, bits and channel numner */
+  //delayToWrite = ((((float)READ_LEN / sampleRate) * 1000000)/(bits / 8)) + 1;
+  setParameters(sampleRate, bits, channels);
   playMode = FILE_MODE;
   seekPointer = dataStart;
-  delayToWrite = ((((float)READ_LEN / sampleRate) * 1000000)/(bits / 8)) + 1;
 }
 
 void pwmWav::setData(const uint8_t* src, uint32_t len){
   if(!_init) return;
   wavData = src;
   getHeader(wavData, len);
-  ledc_timer_bit_t bt = (ledc_timer_bit_t)bits;
-  pwm_audio_set_param(sampleRate, bt, channels);  /**< Set sample rate, bits and channel numner */
+  //ledc_timer_bit_t bt = (ledc_timer_bit_t)bits;
+  //pwm_audio_set_param(sampleRate, bt, channels);  /**< Set sample rate, bits and channel numner */
+  //delayToWrite = ((((float)READ_LEN / sampleRate) * 1000000)/(bits / 8)) + 1;
+  setParameters(sampleRate, bits, channels);
   playMode = DATA_MODE;
   seekPointer = dataStart;
-  delayToWrite = ((((float)READ_LEN / sampleRate) * 1000000)/(bits / 8)) + 1;
 }
 
 bool pwmWav::setData(WiFiClient src){
@@ -284,11 +281,12 @@ bool pwmWav::setData(WiFiClient src){
     bufC = readHTTPContentWithCMP(buf, &code, DATA_CHUNK_ID, 4, 512);
     if(code==200){
       if(getHeader(buf, bufC)== 0) return false;
-      ledc_timer_bit_t bt = (ledc_timer_bit_t)bits;
-      pwm_audio_set_param(sampleRate, bt, channels);  /**< Set sample rate, bits and channel numner */
+      //ledc_timer_bit_t bt = (ledc_timer_bit_t)bits;
+      //pwm_audio_set_param(sampleRate, bt, channels);  /**< Set sample rate, bits and channel numner */
+      //delayToWrite = ((((float)READ_LEN / sampleRate) * 1000000)/(bits / 8)) + 1;
+      setParameters(sampleRate, bits, channels);
       playMode = ONLINE_MODE;
       seekPointer = dataStart;
-      delayToWrite = ((((float)READ_LEN / sampleRate) * 1000000)/(bits / 8)) + 1;
       return true;
     }else{
       if(_echo) Serial.println("Could not read data from server!");
@@ -302,6 +300,8 @@ void pwmWav::setParameters(int sr, int bit, int ch){
   bits = bit;
   channels = (ch>2 || ch<1)?1:ch;
   pwm_audio_set_param(sampleRate, (ledc_timer_bit_t)bits, channels);  /**< Set sample rate, bits and channel numner */
+  delayToWrite = ((((float)READ_LEN / sampleRate) * 1000000)/(bits / 8)) + 1;
+  isSetParameters = true;
 }
 
 unsigned int pwmWav::getLengthTime(uint8_t *hr, uint8_t *mi, uint8_t *sc){

@@ -27,6 +27,8 @@ typedef struct wav_config_t{
   int8_t vol;
 }outconfig_t;
 
+typedef void (*WAVCallback)(uint8_t *pwm_buffer, int len);
+
 enum play_mode{
   FILE_MODE,
   DATA_MODE,
@@ -35,7 +37,7 @@ enum play_mode{
 
 class pwmWav{
   public:
-  
+    bool isSetParameters = false;
     uint8_t outBuf[READ_LEN];
   
     pwmWav(){}
@@ -64,13 +66,15 @@ class pwmWav{
     int getBits(){ return bits; }
     
     void setParameters(int, int, int);
+    void setCallback(WAVCallback cb){ _pwmCallback = cb; }
+    void delCallback(void){ _pwmCallback = nullptr; }
 
     unsigned int getLengthTime(uint8_t*, uint8_t*, uint8_t*);
     unsigned int getLengthSeconds(void);
     bool urlSeperator(String*, String*, int*);
     
     void enEcho(bool);
-    void getBuffer(uint8_t *dst, int len = READ_LEN){ memcpy(dst, outBuf, len); }
+    void getBuffer(uint8_t *dst, int len = READ_LEN){ int cpylen = min(len, READ_LEN); memcpy(dst, outBuf, cpylen); }
     int getBufferLength(){ return READ_LEN; }
     
   private:
@@ -88,6 +92,8 @@ class pwmWav{
     char* wavOnline = NULL;
     uint32_t delayToWrite;
     bool _echo = false;
+    
+    WAVCallback _pwmCallback = nullptr;
 
     int readHTTPContent(uint8_t*, int*, uint32_t);
     int readHTTPContentWithCMP(uint8_t*, int*, const char* contentcmp = "", uint8_t aftercmp = 0, int bufLen = READ_LEN);
